@@ -341,6 +341,8 @@ export async function requestWallet(): Promise<string> {
 export function watchWallet(
   onAccountsChanged: (address: string | null) => void,
   onChainChanged: (chainId: string) => void,
+  onConnect?: () => void,
+  onDisconnect?: () => void,
 ): () => void {
   const active = provider()
   if (!active?.on) return () => undefined
@@ -349,11 +351,17 @@ export function watchWallet(
     onAccountsChanged(accounts[0] || null)
   }
   const chainHandler = (...args: unknown[]) => onChainChanged(String(args[0] || '').toLowerCase())
+  const connectHandler = (..._args: unknown[]) => onConnect?.()
+  const disconnectHandler = (..._args: unknown[]) => onDisconnect?.()
   active.on('accountsChanged', accountsHandler)
   active.on('chainChanged', chainHandler)
+  active.on('connect', connectHandler)
+  active.on('disconnect', disconnectHandler)
   return () => {
     active.removeListener?.('accountsChanged', accountsHandler)
     active.removeListener?.('chainChanged', chainHandler)
+    active.removeListener?.('connect', connectHandler)
+    active.removeListener?.('disconnect', disconnectHandler)
   }
 }
 
