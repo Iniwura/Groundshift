@@ -291,7 +291,9 @@ export async function getEventBundle(eventId: number): Promise<EventBundle> {
   return { event, affected }
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+let dashboardDataInFlight: Promise<DashboardData> | null = null
+
+async function loadDashboardData(): Promise<DashboardData> {
   const [sourceCount, decisionCount, eventCount] = await Promise.all([
     getSourceCount(),
     getDecisionCount(),
@@ -314,6 +316,17 @@ export async function getDashboardData(): Promise<DashboardData> {
     eventCount,
     truncated: sourceCount > visibleLimit || decisionCount > visibleLimit || eventCount > visibleLimit,
   }
+}
+
+export function getDashboardData(): Promise<DashboardData> {
+  if (dashboardDataInFlight) return dashboardDataInFlight
+  const request = loadDashboardData()
+  dashboardDataInFlight = request
+  request.then(
+    () => { if (dashboardDataInFlight === request) dashboardDataInFlight = null },
+    () => { if (dashboardDataInFlight === request) dashboardDataInFlight = null },
+  )
+  return request
 }
 
 export async function getWalletAddress(): Promise<string | null> {
